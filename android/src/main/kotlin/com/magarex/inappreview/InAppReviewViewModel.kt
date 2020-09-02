@@ -12,15 +12,7 @@ import com.google.android.play.core.review.ReviewManager
 import kotlinx.coroutines.*
 
 class InAppReviewViewModel(private val reviewManager: ReviewManager) : ViewModel() {
-    /**
-     * For this sample, we check if the user has been asked to review during this application session
-     * already. Every time the app process starts fresh, it will be reset.
-     *
-     * In a real app, you should implement your own back-off strategy, for example:
-     * you could persist the last time the user was asked in a database,
-     * and only ask if at least a week has passed from the previous request.
-     */
-    private var alreadyAskedForReview = false
+
     private var reviewInfo: Deferred<ReviewInfo>? = null
 
     /**
@@ -28,7 +20,7 @@ class InAppReviewViewModel(private val reviewManager: ReviewManager) : ViewModel
      */
     @MainThread
     fun preWarmReview() {
-        if (!alreadyAskedForReview && reviewInfo == null) {
+        if (reviewInfo == null) {
             reviewInfo = viewModelScope.async { reviewManager.requestReview() }
         }
     }
@@ -47,7 +39,7 @@ class InAppReviewViewModel(private val reviewManager: ReviewManager) : ViewModel
     }
 
     @ExperimentalCoroutinesApi
-    fun launchReview(activity: Activity, callback: () -> Unit) {
+    fun launchReview(activity: Activity, onReviewComplete: () -> Unit) {
         viewModelScope.launch {
             val reviewInfo = obtainReviewInfo()
             withContext(viewModelScope.coroutineContext) {
@@ -55,20 +47,8 @@ class InAppReviewViewModel(private val reviewManager: ReviewManager) : ViewModel
                     reviewManager.launchReview(activity, it)
                 }
             }
-            callback()
+            onReviewComplete()
         }
-    }
-
-    /**
-     * The view should call this to let the ViewModel know that an attempt to show the review dialog
-     * was made.
-     *
-     * A real app could record the time when this request was made to implement a back-off strategy.
-     *
-     * @see alreadyAskedForReview
-     */
-    fun notifyAskedForReview() {
-        alreadyAskedForReview = true
     }
 }
 
